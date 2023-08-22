@@ -10,6 +10,21 @@ const resolvers = require("./graphql/resolvers");
 const server = new ApolloServer({
   typeDefs,
   resolvers,
+  // context: async ({ req }) => {
+  //   const token = req.headers.authentication || "";
+  //   const user = authenticate(token);
+
+  //   if (!user)
+  //     throw new GraphQLError("you must be logged in to query this schema", {
+  //       extensions: {
+  //         code: "UNAUTHENTICATED",
+  //       },
+  //     });
+
+  //   return {
+  //     user,
+  //   };
+  // },
 });
 
 const startServer = async () => {

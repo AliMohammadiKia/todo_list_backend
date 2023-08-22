@@ -1,4 +1,6 @@
 const { v4: uuidv4 } = require("uuid");
+const bcrypt = require("bcryptjs");
+const { generateToken, hashPassword } = require("../auth/auth");
 const driver = require("../db/connection");
 
 const resolvers = {
@@ -97,6 +99,48 @@ const resolvers = {
       try {
         await session.run("MATCH (t:Todo {id: $id}) DELETE t", { id });
         return true;
+      } catch (err) {
+        throw new Error(err.message);
+      } finally {
+        session.close();
+      }
+    },
+    signUp: async (_, { username, password }) => {
+      const session = driver.session();
+      try {
+        const id = uuidv4();
+        const hashPass = hashPassword(password);
+        const result = await session.run(
+          "CREATE (u:User {id: $id, username: $username, password: $password}) RETURN u",
+          { id, username, hashPass }
+        );
+        session.close();
+        return result.records[0].get("t").properties;
+      } catch (err) {
+        throw new Error(err.message);
+      } finally {
+        session.close();
+      }
+    },
+    singIn: async (_, { username, password }) => {
+      const session = driver.session();
+      try {
+        const user = await session.run(
+          "MATCH (u:User {username: $username}) RETURN u",
+          { username }
+        );
+        if (!user) {
+          throw new Error("Invalid username or password");
+        }
+
+        const passwordMatch = bcrypt.compareSync(password, user.password);
+        if (!passwordMatch) {
+          throw new Error("Invalid username or password");
+        }
+
+        const token = generateToken(user);
+        session.close();
+        return token;
       } catch (err) {
         throw new Error(err.message);
       } finally {
